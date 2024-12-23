@@ -1,12 +1,10 @@
-import NextAuth from 'next-auth';
+import NextAuth, { AuthError } from 'next-auth';
 import { authConfig } from './auth.config';
 import Credentials from 'next-auth/providers/credentials';
 import { z } from 'zod';
 import { sql } from '@vercel/postgres';
 import type { User } from '@/app/lib/definitions';
 import bcrypt from 'bcrypt';
-import { createSession, deleteSession } from './app/lib/sessions';
-import { redirect } from 'next/navigation';
 
 async function getUser(email: string): Promise<User | undefined> {
   try {
@@ -31,7 +29,6 @@ export const { auth, signIn, signOut } = NextAuth({
           if (!user) return null;
           const passwordsMatch = await bcrypt.compare(password, user.password);
           if (passwordsMatch) {
-            await createSession(user.id);
             return user;
           }
         }
@@ -41,8 +38,3 @@ export const { auth, signIn, signOut } = NextAuth({
     }),
   ],
 });
-
-export async function logout() {
-  deleteSession();
-  redirect('/login');
-}
