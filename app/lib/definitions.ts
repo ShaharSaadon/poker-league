@@ -2,11 +2,15 @@
 // It describes the shape of the data, and what data type each property should accept.
 // For simplicity of teaching, we're manually defining these types.
 // However, these types are generated automatically if you're using an ORM such as Prisma.
+import { z } from 'zod';
+
 export type User = {
   id: string;
   name: string;
   email: string;
   password: string;
+  expiresAt: string;
+  role: 'admin' | 'manager' | 'basic';
 };
 
 export type Customer = {
@@ -41,6 +45,13 @@ export type LatestInvoice = {
 export type LatestInvoiceRaw = Omit<LatestInvoice, 'amount'> & {
   amount: number;
 };
+
+export interface SessionPayload {
+  userId: string;
+  role: string;
+  username?: string;
+  email?: string;
+}
 
 export type InvoicesTable = {
   id: string;

@@ -9,7 +9,7 @@ import {
 } from './definitions';
 import { formatCurrency } from './utils';
 
-const data = await sql<LatestInvoiceRaw>`
+export const data = await sql<LatestInvoiceRaw>`
   SELECT invoices.amount, customers.name, customers.image_url, customers.email
   FROM invoices
   JOIN customers ON invoices.customer_id = customers.id
@@ -161,7 +161,6 @@ export async function fetchInvoiceById(id: string) {
       // Convert amount from cents to dollars
       amount: invoice.amount / 100,
     }));
-
     return invoice[0];
   } catch (error) {
     console.error('Database Error:', error);
