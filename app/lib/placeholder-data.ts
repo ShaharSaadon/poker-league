@@ -1,7 +1,5 @@
 // This file contains placeholder data that you'll be replacing with real data in the Data Fetching chapter:
 
-import { Game } from './definitions';
-
 // https://nextjs.org/learn/dashboard-app/fetching-data
 const users = [
   {

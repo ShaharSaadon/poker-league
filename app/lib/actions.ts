@@ -18,7 +18,7 @@ const FormSchema = z.object({
   date: z.string(),
 });
 
-const CreateGame = FormSchema.omit({ id: true, date: true });
+// const CreateGame = FormSchema.omit({ id: true, date: true });
 const UpdateGame = FormSchema.omit({ id: true, date: true });
 
 export async function createGame(
