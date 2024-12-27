@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { UpdateGame, DeleteGame } from '@/app/ui/games/buttons';
+import { UpdateGame } from '@/app/ui/games/buttons';
 import GameStatus from '@/app/ui/games/status';
 import { formatDateToLocal, formatCurrency } from '@/app/lib/utils';
 import { fetchFilteredGames } from '@/app/lib/data';
@@ -48,7 +48,7 @@ export default async function GamesTable({
                   </div>
                   <div className="flex justify-end gap-2">
                     <UpdateGame id={game.id} />
-                    <DeleteGame id={game.id} />
+                    {/* <DeleteGame id={game.id} /> */}
                   </div>
                 </div>
               </div>
@@ -108,7 +108,7 @@ export default async function GamesTable({
                   <td className="whitespace-nowrap py-3 pl-6 pr-3">
                     <div className="flex justify-end gap-3">
                       <UpdateGame id={game.id} />
-                      <DeleteGame id={game.id} />
+                      {/* <DeleteGame id={game.id} /> */}
                     </div>
                   </td>
                 </tr>
