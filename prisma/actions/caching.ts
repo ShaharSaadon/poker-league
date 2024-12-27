@@ -1,24 +1,22 @@
 import { PrismaClient } from '@prisma/client';
 import { withAccelerate } from '@prisma/extension-accelerate';
 
-const prisma = new PrismaClient()
-  .$extends(withAccelerate());
+const prisma = new PrismaClient().$extends(withAccelerate());
 
 async function main() {
-
   const startTime = performance.now();
 
   // Learn more about caching strategies:
   // https://www.prisma.io/docs/accelerate/caching
-  const cachedUsersWithPosts = await prisma.user.findMany({
+  const cachedUsersWithGames = await prisma.user.findMany({
     where: {
-      email: { contains: "alice" }
+      email: { contains: 'alice' },
     },
-    include: { posts: true },
+    include: { games: true },
     cacheStrategy: {
       swr: 30, // 30 seconds
-      ttl: 60  // 60 seconds
-    }
+      ttl: 60, // 60 seconds
+    },
   });
 
   const endTime = performance.now();
@@ -27,8 +25,7 @@ async function main() {
   const elapsedTime = endTime - startTime;
 
   console.log(`The query took ${elapsedTime}ms.`);
-  console.log(`It returned the following data: \n`, cachedUsersWithPosts);
-
+  console.log(`It returned the following data: \n`, cachedUsersWithGames);
 }
 
 main()
