@@ -1,11 +1,12 @@
 import bcrypt from 'bcrypt';
-import { db } from '@vercel/postgres';
-import { invoices, customers, revenue, users } from '../lib/placeholder-data';
+import { db, sql } from '@vercel/postgres';
+import { games, players, revenue, users } from '../lib/placeholder-data';
 
 const client = await db.connect();
 
 async function seedUsers() {
   await client.sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
+
   await client.sql`
     CREATE TABLE IF NOT EXISTS users (
       id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -26,87 +27,81 @@ async function seedUsers() {
     })
   );
 
-  return insertedUsers;
+  console.log('Users seeded:', insertedUsers.length);
 }
 
-async function seedInvoices() {
-  await client.sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
-
-  await client.sql`
-    CREATE TABLE IF NOT EXISTS invoices (
-      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-      customer_id UUID NOT NULL,
-      amount INT NOT NULL,
-      status VARCHAR(255) NOT NULL,
+async function seedGames() {
+  await sql`
+    CREATE TABLE IF NOT EXISTS games (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      player_ids UUID[] NOT NULL,
       date DATE NOT NULL
     );
   `;
 
-  const insertedInvoices = await Promise.all(
-    invoices.map(
-      (invoice) => client.sql`
-        INSERT INTO invoices (customer_id, amount, status, date)
-        VALUES (${invoice.customer_id}, ${invoice.amount}, ${invoice.status}, ${invoice.date})
-        ON CONFLICT (id) DO NOTHING;
-      `
-    )
-  );
+  for (const game of games) {
+    const playerIdsFormatted = `{${game.player_ids.join(',')}}`; // Format as PostgreSQL array
+    await sql`
+      INSERT INTO games (player_ids, date)
+      VALUES (${playerIdsFormatted}::uuid[], ${game.date})
+    `;
+  }
 
-  return insertedInvoices;
+  console.log(`Inserted ${games.length} games`);
 }
 
-async function seedCustomers() {
-  await client.sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
-
+async function seedPlayers() {
   await client.sql`
-    CREATE TABLE IF NOT EXISTS customers (
-      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    CREATE TABLE IF NOT EXISTS players (
+      id UUID PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
-      email VARCHAR(255) NOT NULL,
-      image_url VARCHAR(255) NOT NULL
+      email VARCHAR(255) NOT NULL UNIQUE,
+      image_url VARCHAR(255) NOT NULL,
+      total_games_played INT DEFAULT 0,
+      total_money_earned NUMERIC DEFAULT 0
     );
   `;
 
-  const insertedCustomers = await Promise.all(
-    customers.map(
-      (customer) => client.sql`
-        INSERT INTO customers (id, name, email, image_url)
-        VALUES (${customer.id}, ${customer.name}, ${customer.email}, ${customer.image_url})
+  const insertedPlayers = await Promise.all(
+    players.map((player) => {
+      return client.sql`
+        INSERT INTO players (id, name, email, image_url)
+        VALUES (${player.id}, ${player.name}, ${player.email}, ${player.image_url})
         ON CONFLICT (id) DO NOTHING;
-      `
-    )
+      `;
+    })
   );
 
-  return insertedCustomers;
+  console.log('Players seeded:', insertedPlayers.length);
 }
 
 async function seedRevenue() {
   await client.sql`
     CREATE TABLE IF NOT EXISTS revenue (
-      month VARCHAR(4) NOT NULL UNIQUE,
+      month VARCHAR(4) NOT NULL PRIMARY KEY,
       revenue INT NOT NULL
     );
   `;
 
   const insertedRevenue = await Promise.all(
-    revenue.map(
-      (rev) => client.sql`
+    revenue.map((rev) => {
+      return client.sql`
         INSERT INTO revenue (month, revenue)
         VALUES (${rev.month}, ${rev.revenue})
         ON CONFLICT (month) DO NOTHING;
-      `
-    )
+      `;
+    })
   );
 
-  return insertedRevenue;
+  console.log('Revenue seeded:', insertedRevenue.length);
 }
 
 export async function GET() {
   try {
     await client.sql`BEGIN`;
     await seedUsers();
-    await seedCustomers();
-    await seedInvoices();
+    await seedPlayers();
+    await seedGames();
     await seedRevenue();
     await client.sql`COMMIT`;
 

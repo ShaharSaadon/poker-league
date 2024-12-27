@@ -10,19 +10,33 @@ export type User = {
   password: string;
 };
 
-export type Customer = {
+export type Player = {
   id: string;
   name: string;
   email: string;
+  password: string;
+  totalGamesPlayed: number;
+  totalMoneyEarned: number;
   image_url: string;
 };
 
-export type Invoice = {
+export type Table = {
   id: string;
-  customer_id: string;
-  amount: number;
+  name: string;
+  createdBy: string;
+  totalGamesPlayed: number;
+  totalPlayers: number;
+  createdAt: string;
+};
+
+export type Game = {
+  id: string;
+  tableId: string;
   date: string;
-  status: 'pending' | 'paid';
+  players: Player[];
+  results: string;
+  moneyTransfers: string;
+  status: 'playing' | 'finished';
 };
 
 export type Revenue = {
@@ -30,7 +44,7 @@ export type Revenue = {
   revenue: number;
 };
 
-export type LatestInvoice = {
+export type LatestGame = {
   id: string;
   name: string;
   image_url: string;
@@ -39,13 +53,13 @@ export type LatestInvoice = {
 };
 
 // The database returns a number for amount, but we later format it to a string with the formatCurrency function
-export type LatestInvoiceRaw = Omit<LatestInvoice, 'amount'> & {
+export type LatestGameRaw = Omit<LatestGame, 'amount'> & {
   amount: number;
 };
 
-export type InvoicesTable = {
+export type GamesTable = {
   id: string;
-  customer_id: string;
+  player_id: string;
   name: string;
   email: string;
   image_url: string;
@@ -54,34 +68,34 @@ export type InvoicesTable = {
   status: 'pending' | 'paid';
 };
 
-export type CustomersTableType = {
+export type PlayersTableType = {
   id: string;
   name: string;
   email: string;
   image_url: string;
-  total_invoices: number;
+  total_games: number;
   total_pending: number;
   total_paid: number;
 };
 
-export type FormattedCustomersTable = {
+export type FormattedPlayersTable = {
   id: string;
   name: string;
   email: string;
   image_url: string;
-  total_invoices: number;
+  total_games: number;
   total_pending: string;
   total_paid: string;
 };
 
-export type CustomerField = {
+export type PlayerField = {
   id: string;
   name: string;
 };
 
-export type InvoiceForm = {
+export type GameForm = {
   id: string;
-  customer_id: string;
+  player_id: string;
   amount: number;
   status: 'pending' | 'paid';
 };

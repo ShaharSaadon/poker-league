@@ -10,103 +10,115 @@ import { signIn } from '@/auth';
 
 const FormSchema = z.object({
   id: z.string(),
-  customerId: z.string({
-    invalid_type_error: 'Please select a customer.',
-  }),
-  amount: z.coerce
-    .number()
-    .gt(0, { message: 'Please enter an amount greater than $0.' }),
-  status: z.enum(['pending', 'paid'], {
-    invalid_type_error: 'Please select an invoice status.',
-  }),
+  playerIds: z
+    .array(z.string().uuid(), {
+      invalid_type_error: 'Please select at least one player.',
+    })
+    .nonempty('Please select at least one player.'),
   date: z.string(),
 });
 
-const CreateInvoice = FormSchema.omit({ id: true, date: true });
-const UpdateInvoice = FormSchema.omit({ id: true, date: true });
+const CreateGame = FormSchema.omit({ id: true, date: true });
+const UpdateGame = FormSchema.omit({ id: true, date: true });
 
-export async function createInvoice(prevState: State, formData: FormData) {
-  // Validate form using Zod
-  const validatedFields = CreateInvoice.safeParse({
-    customerId: formData.get('customerId'),
-    amount: formData.get('amount'),
-    status: formData.get('status'),
-  });
+export async function createGame(
+  state: State,
+  formData: FormData
+): Promise<State> {
+  // Perform validation
+  const validatedFields = z
+    .object({
+      playerIds: z
+        .array(z.string().uuid())
+        .nonempty('Please select at least one player.'),
+    })
+    .safeParse({
+      playerIds: formData.getAll('playerIds') as string[],
+    });
 
-  // If form validation fails, return errors early. Otherwise, continue.
   if (!validatedFields.success) {
     return {
+      ...state, // Preserve the existing state
       errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Missing Fields. Failed to Create Invoice.',
+      message: 'Missing Fields. Failed to Create Game.',
     };
   }
 
-  // Prepare data for insertion into the database
-  const { customerId, amount, status } = validatedFields.data;
-  const amountInCents = amount * 100;
+  const { playerIds } = validatedFields.data;
+  const formattedPlayerIds = `{${playerIds.join(',')}}`;
   const date = new Date().toISOString().split('T')[0];
 
-  // Insert data into the database
   try {
     await sql`
-      INSERT INTO invoices (customer_id, amount, status, date)
-      VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
+      INSERT INTO games (player_ids, date)
+      VALUES (${formattedPlayerIds}::uuid[], ${date})
     `;
-  } catch (error) {
-    // If a database error occurs, return a more specific error.
     return {
-      message: 'Database Error: Failed to Create Invoice.',
+      ...state,
+      message: 'Game created successfully.',
+    };
+  } catch (error) {
+    return {
+      ...state,
+      message: 'Database Error: Failed to Create Game.',
       error,
     };
   }
-
-  // Revalidate the cache for the invoices page and redirect the user.
-  revalidatePath('/dashboard/invoices');
-  redirect('/dashboard/invoices');
 }
 
-export async function updateInvoice(
+export async function updateGame(
   id: string,
   prevState: State,
   formData: FormData
 ) {
-  const validatedFields = UpdateInvoice.safeParse({
-    customerId: formData.get('customerId'),
-    amount: formData.get('amount'),
-    status: formData.get('status'),
+  const validatedFields = UpdateGame.safeParse({
+    playerIds: formData.getAll('playerIds') as string[],
   });
 
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Missing Fields. Failed to Update Invoice.',
+      message: 'Missing Fields. Failed to Update Game.',
     };
   }
 
-  const { customerId, amount, status } = validatedFields.data;
-  const amountInCents = amount * 100;
+  const { playerIds } = validatedFields.data;
+  const formattedPlayerIds = `{${playerIds.join(',')}}`; // Format array for PostgreSQL
 
   try {
     await sql`
-      UPDATE invoices
-      SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
+      UPDATE games
+      SET player_ids = ${formattedPlayerIds}::uuid[]
       WHERE id = ${id}
     `;
   } catch (error) {
-    return { message: 'Database Error: Failed to Update Invoice.', error };
+    return { message: 'Database Error: Failed to Update Game.', error };
   }
 
-  revalidatePath('/dashboard/invoices');
-  redirect('/dashboard/invoices');
+  revalidatePath('/dashboard/games');
+  redirect('/dashboard/games');
 }
 
-export async function deleteInvoice(id: string) {
+export async function deleteGame(id: string) {
   try {
-    await sql`DELETE FROM invoices WHERE id = ${id}`;
-    revalidatePath('/dashboard/invoices');
-    return { message: 'Deleted Invoice.' };
+    await sql`DELETE FROM games WHERE id = ${id}`;
+    revalidatePath('/dashboard/games');
+    return { message: 'Deleted Game.' };
   } catch (error) {
-    return { message: 'Database Error: Failed to Delete Invoice.', error };
+    return { message: 'Database Error: Failed to Delete Game.', error };
+  }
+}
+
+export async function getGames() {
+  try {
+    const games = await sql`
+      SELECT id, player_ids, date
+      FROM games
+    `;
+    return games.rows;
+  } catch (error) {
+    console.error('Failed to fetch games:', error);
+    throw new Error('Failed to fetch games.');
   }
 }
 
@@ -140,9 +152,8 @@ export async function authenticate(
 
 export type State = {
   errors?: {
-    customerId?: string[];
-    amount?: string[];
-    status?: string[];
+    playerIds?: string[];
   };
-  message?: string | null;
+  message?: string;
+  error?: unknown;
 };

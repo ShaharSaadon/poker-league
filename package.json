@@ -4,10 +4,15 @@
     "build": "next build",
     "dev": "next dev --turbopack",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "queries": "ts-node ./prisma/actions/queries.ts",
+    "caching": "ts-node ./prisma/actions/caching.ts",
+    "realtime": "ts-node ./prisma/actions/realtime.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@prisma/client": "6.1.0",
+    "@prisma/extension-accelerate": "^1.2.1",
     "@tailwindcss/forms": "^0.5.9",
     "@vercel/postgres": "^0.10.0",
     "autoprefixer": "10.4.20",
@@ -31,6 +36,7 @@
     "@types/react": "19.0.0",
     "@types/react-dom": "19.0.0",
     "eslint": "^9",
-    "eslint-config-next": "15.1.2"
+    "eslint-config-next": "15.1.2",
+    "prisma": "^6.1.0"
   }
 }
