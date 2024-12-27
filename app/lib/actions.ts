@@ -2,8 +2,7 @@
 
 import { sql } from '@vercel/postgres';
 import { z } from 'zod';
-import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+
 // import { signIn } from '@/auth';
 import { AuthError, User } from 'next-auth';
 import { signIn } from '@/auth';
@@ -70,7 +69,7 @@ export async function updateGame(
   id: string,
   prevState: State,
   formData: FormData
-) {
+): Promise<State> {
   const validatedFields = UpdateGame.safeParse({
     playerIds: formData.getAll('playerIds') as string[],
   });
@@ -79,6 +78,7 @@ export async function updateGame(
     return {
       errors: validatedFields.error.flatten().fieldErrors,
       message: 'Missing Fields. Failed to Update Game.',
+      error: undefined, // Add this explicitly
     };
   }
 
@@ -91,12 +91,18 @@ export async function updateGame(
       SET player_ids = ${formattedPlayerIds}::uuid[]
       WHERE id = ${id}
     `;
+    return {
+      errors: {},
+      message: 'Game updated successfully!',
+      error: undefined,
+    };
   } catch (error) {
-    return { message: 'Database Error: Failed to Update Game.', error };
+    return {
+      errors: {},
+      message: 'Database Error: Failed to Update Game.',
+      error,
+    };
   }
-
-  revalidatePath('/dashboard/games');
-  redirect('/dashboard/games');
 }
 
 export async function getGames() {
@@ -142,8 +148,10 @@ export async function authenticate(
 
 export type State = {
   errors?: {
+    status?: string[];
     playerIds?: string[];
+    amount?: string[];
   };
-  message?: string;
+  message: string;
   error?: unknown;
 };

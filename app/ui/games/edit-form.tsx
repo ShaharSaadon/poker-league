@@ -19,7 +19,7 @@ export default function EditGameForm({
   game: GameForm;
   players: PlayerField[];
 }) {
-  const initialState: State = { message: null, errors: {} };
+  const initialState: State = { message: '', errors: {} };
   const updateGameWithId = updateGame.bind(null, game.id);
   const [state, formAction] = useActionState(updateGameWithId, initialState);
   return (
@@ -50,8 +50,8 @@ export default function EditGameForm({
             <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" />
           </div>
           <div id="player-error" aria-live="polite" aria-atomic="true">
-            {state.errors?.playerId &&
-              state.errors.playerId.map((error: string) => (
+            {state.errors?.playerIds &&
+              state.errors.playerIds.map((error: string) => (
                 <p className="mt-2 text-sm text-red-500" key={error}>
                   {error}
                 </p>
