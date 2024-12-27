@@ -99,16 +99,6 @@ export async function updateGame(
   redirect('/dashboard/games');
 }
 
-export async function deleteGame(id: string) {
-  try {
-    await sql`DELETE FROM games WHERE id = ${id}`;
-    revalidatePath('/dashboard/games');
-    return { message: 'Deleted Game.' };
-  } catch (error) {
-    return { message: 'Database Error: Failed to Delete Game.', error };
-  }
-}
-
 export async function getGames() {
   try {
     const games = await sql`
