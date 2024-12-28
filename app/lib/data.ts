@@ -8,6 +8,9 @@ import {
   Revenue,
 } from './definitions';
 import { formatCurrency } from './utils';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+const ITEMS_PER_PAGE = 6;
 
 // export const data = await sql<LatestGameRaw>`
 //   SELECT games.amount, players.name, players.image_url, players.email
@@ -32,18 +35,42 @@ export async function fetchRevenue() {
 
 export async function fetchLatestGames() {
   try {
-    const data = await sql<LatestGameRaw>`
-      SELECT games.amount, players.name, players.image_url, players.email, games.id
-      FROM games
-      JOIN players ON games.player_id = players.id
-      ORDER BY games.date DESC
-      LIMIT 5`;
+    // Fetch the latest 5 games with players
+    const latestGames = await prisma.game.findMany({
+      orderBy: { date: 'desc' },
+      take: 5,
+      include: {
+        players: {
+          include: {
+            player: {
+              select: {
+                id: true,
+                name: true,
+                imageUrl: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-    const latestGames = data.rows.map((game) => ({
-      ...game,
-      amount: formatCurrency(game.amount),
+    // Format the data
+    const formattedGames = latestGames.map((game) => ({
+      id: game.id,
+      date: game.date,
+      status: game.status,
+      host: game.host,
+      amount: formatCurrency(game.amount / 100), // Assuming `amount` is stored in cents
+      players: game.players.map((playerRelation) => ({
+        id: playerRelation.player.id,
+        name: playerRelation.player.name,
+        image: playerRelation.player.imageUrl,
+        email: playerRelation.player.email,
+      })),
     }));
-    return latestGames;
+
+    return formattedGames;
   } catch (error) {
     console.error('Database Error:', error);
     throw new Error('Failed to fetch the latest games.');
@@ -52,29 +79,32 @@ export async function fetchLatestGames() {
 
 export async function fetchCardData() {
   try {
-    const gameCountPromise = sql`SELECT COUNT(*) FROM games`;
-    const playerCountPromise = sql`SELECT COUNT(*) FROM players`;
-    const gameStatusPromise = sql`SELECT
-         SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS "paid",
-         SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending"
-         FROM games`;
+    const gameCountPromise = prisma.game.count();
+    const playerCountPromise = prisma.player.count();
+    const gamesPromise = prisma.game.findMany({
+      select: {
+        status: true,
+        amount: true,
+      },
+    });
 
-    const data = await Promise.all([
+    const [numberOfGames, numberOfPlayers, games] = await Promise.all([
       gameCountPromise,
       playerCountPromise,
-      gameStatusPromise,
+      gamesPromise,
     ]);
 
-    const numberOfGames = Number(data[0].rows[0].count ?? '0');
-    const numberOfPlayers = Number(data[1].rows[0].count ?? '0');
-    const totalPaidGames = formatCurrency(data[2].rows[0].paid ?? '0');
-    const totalPendingGames = formatCurrency(data[2].rows[0].pending ?? '0');
+    const totals = games.reduce((acc, game) => {
+      acc += game.amount;
+      return acc;
+    }, 0);
+
+    const totalGames = formatCurrency(totals);
 
     return {
       numberOfPlayers,
       numberOfGames,
-      totalPaidGames,
-      totalPendingGames,
+      totalGames,
     };
   } catch (error) {
     console.error('Database Error:', error);
@@ -82,33 +112,96 @@ export async function fetchCardData() {
   }
 }
 
-const ITEMS_PER_PAGE = 6;
 export async function fetchFilteredGames(query: string, currentPage: number) {
-  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+  const skip = (currentPage - 1) * ITEMS_PER_PAGE;
+  const take = ITEMS_PER_PAGE;
+
+  // Helper to check if a query is a valid date
+  const isValidDate = (value: string) => {
+    const date = new Date(value);
+    return !isNaN(date.getTime());
+  };
 
   try {
-    const games = await sql<GamesTable>`
-      SELECT
-        games.id,
-        games.amount,
-        games.date,
-        games.status,
-        players.name,
-        players.email,
-        players.image_url
-      FROM games
-      JOIN players ON games.player_id = players.id
-      WHERE
-        players.name ILIKE ${`%${query}%`} OR
-        players.email ILIKE ${`%${query}%`} OR
-        games.amount::text ILIKE ${`%${query}%`} OR
-        games.date::text ILIKE ${`%${query}%`} OR
-        games.status ILIKE ${`%${query}%`}
-      ORDER BY games.date DESC
-      LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}
-    `;
+    const games = await prisma.game.findMany({
+      where: {
+        OR: [
+          {
+            players: {
+              some: {
+                player: {
+                  name: {
+                    contains: query,
+                    mode: 'insensitive',
+                  },
+                },
+              },
+            },
+          },
+          {
+            players: {
+              some: {
+                player: {
+                  email: {
+                    contains: query,
+                    mode: 'insensitive',
+                  },
+                },
+              },
+            },
+          },
+          {
+            amount: {
+              equals: isNaN(Number(query)) ? undefined : Number(query),
+            },
+          },
+          {
+            date: {
+              equals: isValidDate(query) ? new Date(query) : undefined,
+            },
+          },
+          {
+            status: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      },
+      orderBy: {
+        date: 'desc',
+      },
+      skip,
+      take,
+      include: {
+        players: {
+          include: {
+            player: {
+              select: {
+                name: true,
+                email: true,
+                imageUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-    return games.rows;
+    // Format the results
+    const formattedGames = games.map((game) => ({
+      id: game.id,
+      date: game.date,
+      status: game.status,
+      amount: game.amount, // Assuming the amount is already in the correct format
+      players: game.players.map((relation) => ({
+        name: relation.player.name,
+        email: relation.player.email,
+        image: relation.player.imageUrl,
+      })),
+    }));
+
+    return formattedGames;
   } catch (error) {
     console.error('Database Error:', error);
     throw new Error('Failed to fetch games.');
@@ -116,19 +209,63 @@ export async function fetchFilteredGames(query: string, currentPage: number) {
 }
 
 export async function fetchGamesPages(query: string) {
-  try {
-    const count = await sql`SELECT COUNT(*)
-    FROM games
-    JOIN players ON games.player_id = players.id
-    WHERE
-      players.name ILIKE ${`%${query}%`} OR
-      players.email ILIKE ${`%${query}%`} OR
-      games.amount::text ILIKE ${`%${query}%`} OR
-      games.date::text ILIKE ${`%${query}%`} OR
-      games.status ILIKE ${`%${query}%`}
-  `;
+  // Helper to check if a query is a valid date
+  const isValidDate = (value: string) => {
+    const date = new Date(value);
+    return !isNaN(date.getTime());
+  };
 
-    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
+  try {
+    const totalGames = await prisma.game.count({
+      where: {
+        OR: [
+          {
+            players: {
+              some: {
+                player: {
+                  name: {
+                    contains: query,
+                    mode: 'insensitive',
+                  },
+                },
+              },
+            },
+          },
+          {
+            players: {
+              some: {
+                player: {
+                  email: {
+                    contains: query,
+                    mode: 'insensitive',
+                  },
+                },
+              },
+            },
+          },
+          {
+            amount: {
+              equals: isNaN(Number(query)) ? undefined : Number(query),
+            },
+          },
+          {
+            date: {
+              equals: isValidDate(query) ? new Date(query) : undefined,
+            },
+          },
+          {
+            status: {
+              contains: query,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      },
+    });
+
+    // Calculate the total number of pages
+    const totalPages = Math.ceil(totalGames / ITEMS_PER_PAGE);
+
     return totalPages;
   } catch (error) {
     console.error('Database Error:', error);
@@ -136,24 +273,45 @@ export async function fetchGamesPages(query: string) {
   }
 }
 
+function isValidDate(date: string): boolean {
+  const parsedDate = new Date(date);
+  return !isNaN(parsedDate.getTime());
+}
 export async function fetchGameById(id: string) {
   try {
-    const data = await sql<GameForm>`
-      SELECT
-        games.id,
-        games.player_id,
-        games.amount,
-        games.status
-      FROM games
-      WHERE games.id = ${id};
-    `;
+    const game = await prisma.game.findUnique({
+      where: { id },
+      include: {
+        players: {
+          include: {
+            player: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                imageUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-    const game = data.rows.map((game) => ({
-      ...game,
-      // Convert amount from cents to dollars
-      amount: game.amount / 100,
-    }));
-    return game[0];
+    if (!game) {
+      throw new Error('Game not found.');
+    }
+
+    return {
+      id: game.id,
+      amount: game.amount / 100, // Convert amount from cents to dollars
+      status: game.status,
+      players: game.players.map((relation) => ({
+        id: relation.player.id,
+        name: relation.player.name,
+        email: relation.player.email,
+        imageUrl: relation.player.imageUrl,
+      })),
+    };
   } catch (error) {
     console.error('Database Error:', error);
     throw new Error('Failed to fetch game.');
@@ -162,22 +320,22 @@ export async function fetchGameById(id: string) {
 
 export async function fetchPlayers() {
   try {
-    const data = await sql<PlayerField>`
-      SELECT
-        id,
-        name
-      FROM players
-      ORDER BY name ASC
-    `;
+    const players = await prisma.player.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
 
-    const players = data.rows;
     return players;
   } catch (err) {
     console.error('Database Error:', err);
     throw new Error('Failed to fetch all players.');
   }
 }
-
 export async function fetchFilteredPlayers(query: string) {
   try {
     const data = await sql<PlayersTableType>`

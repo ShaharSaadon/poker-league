@@ -7,20 +7,20 @@ export default function GameStatus({ status }: { status: string }) {
       className={clsx(
         'inline-flex items-center rounded-full px-2 py-1 text-xs',
         {
-          'bg-gray-100 text-gray-500': status === 'pending',
-          'bg-green-500 text-white': status === 'paid',
+          'bg-gray-100 text-gray-500': status === 'playing',
+          'bg-green-500 text-white': status === 'completed',
         }
       )}
     >
-      {status === 'pending' ? (
+      {status === 'playing' ? (
         <>
-          Pending
+          Playing
           <ClockIcon className="ml-1 w-4 text-gray-500" />
         </>
       ) : null}
-      {status === 'paid' ? (
+      {status === 'completed' ? (
         <>
-          Paid
+          completed
           <CheckIcon className="ml-1 w-4 text-white" />
         </>
       ) : null}

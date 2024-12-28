@@ -1,48 +1,83 @@
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
-}
-
-model Player {
-    id               String  @id @default(uuid())
-    name             String
-    email            String  @unique
-    imageUrl         String?
-    totalGamesPlayed Int     @default(0)
-    totalMoneyEarned Float   @default(0.0)
-    tables           Table[] @relation("PlayerTables")
-    games            Game[]  @relation("PlayerGames")
-}
-
-model Game {
-    id          String   @id @default(uuid())
-    playerIds   String[]
-    date        DateTime @default(now())
-    status      String   @default("playing")
-    players     Player[] @relation("PlayerGames")
-    createdBy   User?    @relation("UserGames", fields: [createdById], references: [id])
-    createdById String?
-}
-
-model Table {
-    id          String   @id @default(uuid())
-    name        String
-    createdBy   User?    @relation("UserTables", fields: [createdById], references: [id])
-    createdById String?
-    createdAt   DateTime @default(now())
-    players     Player[] @relation("PlayerTables")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-    id        String   @id @default(uuid())
-    name      String
-    email     String   @unique
-    createdAt DateTime @default(now())
-    password  String
-    games     Game[]   @relation("UserGames")
-    tables    Table[]  @relation("UserTables")
+  id               String   @id @default(uuid())
+  name             String
+  email            String   @unique
+  password         String
+  createdAt        DateTime @default(now())
+  registeredTables Table[]  @relation("UserRegisteredTables") // Tables this user is registered for
+  createdTables    Table[]  @relation("UserCreatedTables") // Tables created by this user
+  createdGames     Game[]   @relation("UserGames") // Games created by this user
+  playerId         String?
+  player           Player?  @relation
+}
+
+model Player {
+  id                String     @id @default(uuid())
+  name              String
+  email             String?
+  userId            String?    @unique
+  user              User?      @relation(fields: [userId], references: [id]) // One-to-one relationship
+  games             Game[]     @relation("PlayerGames") // Games the player participates in
+  buyIns            BuyIn[] // Buy-ins for games
+  tables            Table[]    @relation("TablePlayers") // Many-to-many relationship with tables
+  exchangesSent     Exchange[] @relation("ExchangeFrom") // Exchanges where the player is the sender
+  exchangesReceived Exchange[] @relation("ExchangeTo") // Exchanges where the player is the receiver
+  createdAt         DateTime   @default(now())
+}
+
+model Table {
+  id              String   @id @default(uuid())
+  name            String
+  createdAt       DateTime @default(now())
+  createdById     String
+  createdBy       User     @relation("UserCreatedTables", fields: [createdById], references: [id])
+  currentGame     Game? // Only a simple relation here
+  registeredUsers User[]   @relation("UserRegisteredTables") // Users registered for this table
+  players         Player[] @relation("TablePlayers") // Players associated with the table
+}
+
+model Game {
+  id          String     @id @default(uuid())
+  tableId     String     @unique
+  table       Table      @relation(fields: [tableId], references: [id])
+  createdById String // User who created this game
+  createdBy   User       @relation("UserGames", fields: [createdById], references: [id])
+  players     Player[]   @relation("PlayerGames") // Players participating in the game
+  startAmount Float // Starting amount for the game
+  buyIns      BuyIn[] // Buy-ins during this game
+  exchanges   Exchange[] // Exchanges at the end of the game
+  createdAt   DateTime   @default(now()) // Timestamps
+  finishedAt  DateTime? // Optional, set when the game is finished
+}
+
+model BuyIn {
+  id        String   @id @default(uuid())
+  playerId  String
+  player    Player   @relation(fields: [playerId], references: [id])
+  gameId    String
+  game      Game     @relation(fields: [gameId], references: [id])
+  amount    Float
+  createdAt DateTime @default(now()) // Timestamp for when the buy-in occurred
+}
+
+model Exchange {
+  id           String   @id @default(uuid())
+  fromPlayerId String
+  fromPlayer   Player   @relation("ExchangeFrom", fields: [fromPlayerId], references: [id]) // Player sending the money
+  toPlayerId   String
+  toPlayer     Player   @relation("ExchangeTo", fields: [toPlayerId], references: [id]) // Player receiving the money
+  gameId       String
+  game         Game     @relation(fields: [gameId], references: [id]) // Game this exchange belongs to
+  amount       Float
+  createdAt    DateTime @default(now()) // Timestamp for the exchange
+  reminderSent Boolean  @default(false) // Tracks if a reminder was sent
 }

@@ -5,10 +5,11 @@
     "dev": "next dev --turbopack",
     "start": "next start",
     "lint": "next lint",
-    "queries": "ts-node ./prisma/actions/queries.ts",
+    "queries": "ts-node ./prisma/actions/queries.js",
     "caching": "ts-node ./prisma/actions/caching.ts",
     "realtime": "ts-node ./prisma/actions/realtime.ts"
   },
+  "type": "module",
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "6.1.0",

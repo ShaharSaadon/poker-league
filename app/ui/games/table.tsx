@@ -26,16 +26,8 @@ export default async function GamesTable({
                 <div className="flex items-center justify-between border-b pb-4">
                   <div>
                     <div className="mb-2 flex items-center">
-                      <Image
-                        src={game.image_url}
-                        className="mr-2 rounded-full"
-                        width={28}
-                        height={28}
-                        alt={`${game.name}'s profile picture`}
-                      />
-                      <p>{game.name}</p>
+                      <p>{game?.date.toString()}</p>
                     </div>
-                    <p className="text-sm text-gray-500">{game.email}</p>
                   </div>
                   <GameStatus status={game.status} />
                 </div>
@@ -44,7 +36,6 @@ export default async function GamesTable({
                     <p className="text-xl font-medium">
                       {formatCurrency(game.amount)}
                     </p>
-                    <p>{formatDateToLocal(game.date)}</p>
                   </div>
                   <div className="flex justify-end gap-2">
                     <UpdateGame id={game.id} />
@@ -57,19 +48,16 @@ export default async function GamesTable({
             <thead className="rounded-lg text-left text-sm font-normal">
               <tr>
                 <th scope="col" className="px-4 py-5 font-medium sm:pl-6">
-                  Player
-                </th>
-                <th scope="col" className="px-3 py-5 font-medium">
-                  Email
+                  Date
                 </th>
                 <th scope="col" className="px-3 py-5 font-medium">
                   Amount
                 </th>
                 <th scope="col" className="px-3 py-5 font-medium">
-                  Date
+                  Location
                 </th>
                 <th scope="col" className="px-3 py-5 font-medium">
-                  Status
+                  Game Status
                 </th>
                 <th scope="col" className="relative py-3 pl-6 pr-3">
                   <span className="sr-only">Edit</span>
@@ -84,23 +72,13 @@ export default async function GamesTable({
                 >
                   <td className="whitespace-nowrap py-3 pl-6 pr-3">
                     <div className="flex items-center gap-3">
-                      <Image
-                        src={game.image_url}
-                        className="rounded-full"
-                        width={28}
-                        height={28}
-                        alt={`${game.name}'s profile picture`}
-                      />
-                      <p>{game.name}</p>
+                      <p>{formatDateToLocal(game.date.toDateString())}</p>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3">{game.email}</td>
                   <td className="whitespace-nowrap px-3 py-3">
                     {formatCurrency(game.amount)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3">
-                    {formatDateToLocal(game.date)}
-                  </td>
+                  <td className="whitespace-nowrap px-3 py-3">{game.host}</td>
                   <td className="whitespace-nowrap px-3 py-3">
                     <GameStatus status={game.status} />
                   </td>

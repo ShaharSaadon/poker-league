@@ -3,42 +3,6 @@
 // For simplicity of teaching, we're manually defining these types.
 // However, these types are generated automatically if you're using an ORM such as Prisma.
 
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-};
-
-export type Player = {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-  totalGamesPlayed: number;
-  totalMoneyEarned: number;
-  image_url: string;
-};
-
-export type Table = {
-  id: string;
-  name: string;
-  createdBy: string;
-  totalGamesPlayed: number;
-  totalPlayers: number;
-  createdAt: string;
-};
-
-export type Game = {
-  id: string;
-  tableId: string;
-  date: string;
-  players: Player[];
-  results: string;
-  moneyTransfers: string;
-  status: 'playing' | 'finished';
-};
-
 export type Revenue = {
   month: string;
   revenue: number;

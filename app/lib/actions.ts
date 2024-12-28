@@ -2,10 +2,11 @@
 
 import { sql } from '@vercel/postgres';
 import { z } from 'zod';
+import { PrismaClient } from '@prisma/client';
 
-// import { signIn } from '@/auth';
 import { AuthError, User } from 'next-auth';
 import { signIn } from '@/auth';
+const prisma = new PrismaClient();
 
 const FormSchema = z.object({
   id: z.string(),
@@ -24,42 +25,65 @@ export async function createGame(
   state: State,
   formData: FormData
 ): Promise<State> {
-  // Perform validation
+  const playerIds = formData.getAll('playerIds') as string[];
+  console.log('formData:', formData);
+
+  // Validate form data
   const validatedFields = z
     .object({
       playerIds: z
         .array(z.string().uuid())
         .nonempty('Please select at least one player.'),
+      host: z.string().min(1, 'Host is required.'),
+      amount: z.preprocess(
+        (value) => parseInt(value as string, 10),
+        z.number().positive('Amount must be a positive number.')
+      ),
     })
     .safeParse({
-      playerIds: formData.getAll('playerIds') as string[],
+      playerIds,
+      host: formData.get('host') as string,
+      amount: formData.get('amount') as string,
     });
+
+  console.log('validatedFields:', validatedFields);
 
   if (!validatedFields.success) {
     return {
-      ...state, // Preserve the existing state
+      ...state,
       errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Missing Fields. Failed to Create Game.',
+      message: 'Validation failed: Missing or invalid fields.',
     };
   }
 
-  const { playerIds } = validatedFields.data;
-  const formattedPlayerIds = `{${playerIds.join(',')}}`;
-  const date = new Date().toISOString().split('T')[0];
+  const { playerIds: validatedPlayerIds, host, amount } = validatedFields.data;
+  const date = new Date();
 
   try {
-    await sql`
-      INSERT INTO games (player_ids, date)
-      VALUES (${formattedPlayerIds}::uuid[], ${date})
-    `;
+    // Create the game and link players using the players relation
+    await prisma.game.create({
+      data: {
+        host,
+        amount: amount * 100, // Store amount in cents
+        date,
+        players: {
+          create: validatedPlayerIds.map((playerId) => ({
+            player: { connect: { id: playerId } },
+          })),
+        },
+      },
+    });
+
     return {
       ...state,
       message: 'Game created successfully.',
     };
   } catch (error) {
+    console.error('Database Error:', error);
+
     return {
       ...state,
-      message: 'Database Error: Failed to Create Game.',
+      message: 'Database Error: Failed to create game.',
       error,
     };
   }
@@ -87,7 +111,7 @@ export async function updateGame(
 
   try {
     await sql`
-      UPDATE games
+      UPDATE game
       SET player_ids = ${formattedPlayerIds}::uuid[]
       WHERE id = ${id}
     `;
@@ -109,7 +133,7 @@ export async function getGames() {
   try {
     const games = await sql`
       SELECT id, player_ids, date
-      FROM games
+      FROM game
     `;
     return games.rows;
   } catch (error) {
@@ -151,6 +175,7 @@ export type State = {
     status?: string[];
     playerIds?: string[];
     amount?: string[];
+    host?: string[];
   };
   message: string;
   error?: unknown;
