@@ -33,7 +33,7 @@ export async function getPlayersByTable(tableId: string) {
     where: {
       tables: {
         some: {
-          id: tableId, // Filter players who are part of the table with this ID
+          id: tableId,
         },
       },
     },
@@ -50,10 +50,7 @@ export async function getPlayersByTable(tableId: string) {
     },
   });
 }
-export async function getPlayersByGame(
-  tableId: string,
-  gameId: string
-): Promise<
+export async function getPlayersByGame(gameId: string): Promise<
   {
     id: string;
     name: string;
@@ -69,8 +66,8 @@ export async function getPlayersByGame(
   try {
     const players = await prisma.player.findMany({
       where: {
-        tables: {
-          some: { id: tableId },
+        games: {
+          some: { id: gameId }, // Filter players connected to the specific game
         },
       },
       select: {
@@ -109,7 +106,7 @@ export async function getPlayersByGame(
       gameBuyIns: player.buyIns.map((buyIn) => buyIn.amount), // Extract amounts for the game
     }));
   } catch (error) {
-    console.error('Error fetching players:', error);
-    throw new Error('Failed to fetch players.');
+    console.error('Error fetching players by game:', error);
+    throw new Error('Failed to fetch players for the specific game.');
   }
 }

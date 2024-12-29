@@ -6,8 +6,9 @@ import { createGame } from '@/app/lib/actions/games';
 import { getTables } from '@/app/lib/actions/tables';
 import { getPlayersByTable } from '@/app/lib/actions/players';
 import { Player, Table } from '@prisma/client';
-
+import { useRouter } from 'next/navigation';
 export default function Form() {
+  const router = useRouter();
   const [tables, setTables] = useState<Table[]>([]);
   const [players, setPlayers] = useState<Player[]>([]); // Players fetched for the table
   const [availablePlayers, setAvailablePlayers] = useState<Player[]>([]); // Available players to select
@@ -73,10 +74,10 @@ export default function Form() {
       startAmount: startAmount || 100,
       createdById: '4fb78be3-3f89-4826-9457-856928d330ef',
     };
-    console.log('gameData:', gameData);
     try {
-      await createGame(gameData); // Pass the object, not FormData
+      const newGame = await createGame(gameData);
       console.log('Game created successfully!');
+      router.push(`/dashboard/games/${newGame.id}/edit`);
     } catch (error) {
       console.log('Failed to create game.', error);
     }

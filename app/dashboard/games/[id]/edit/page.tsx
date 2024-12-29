@@ -15,7 +15,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
     getGameById(id),
     (async () => {
       const game = await getGameById(id);
-      return getPlayersByGame(game.tableId, id);
+      return getPlayersByGame(id);
     })(),
   ]);
 
@@ -29,7 +29,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         breadcrumbs={[
           { label: 'Games', href: '/dashboard/games' },
           {
-            label: 'Edit Game',
+            label: 'Manage Game',
             href: `/dashboard/games/${id}/edit`,
             active: true,
           },
