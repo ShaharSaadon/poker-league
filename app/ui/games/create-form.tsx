@@ -9,6 +9,7 @@ import { Player, Table } from '@prisma/client';
 import { useRouter } from 'next/navigation';
 export default function Form() {
   const router = useRouter();
+
   const [tables, setTables] = useState<Table[]>([]);
   const [players, setPlayers] = useState<Player[]>([]); // Players fetched for the table
   const [availablePlayers, setAvailablePlayers] = useState<Player[]>([]); // Available players to select
@@ -77,6 +78,7 @@ export default function Form() {
     try {
       const newGame = await createGame(gameData);
       console.log('Game created successfully!');
+      router.refresh();
       router.push(`/dashboard/games/${newGame.id}/edit`);
     } catch (error) {
       console.log('Failed to create game.', error);

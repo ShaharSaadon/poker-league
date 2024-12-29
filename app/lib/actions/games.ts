@@ -48,6 +48,13 @@ export async function getGameById(id: string) {
             email: true,
           },
         },
+        exchanges: {
+          select: {
+            fromPlayerId: true,
+            toPlayerId: true,
+            amount: true,
+          },
+        },
       },
     });
 
@@ -68,6 +75,11 @@ export async function getGameById(id: string) {
         id: player.id,
         name: player.name,
         email: player.email,
+      })),
+      exchanges: game.exchanges.map((exchange) => ({
+        fromPlayerId: exchange.fromPlayerId,
+        toPlayerId: exchange.toPlayerId,
+        amount: exchange.amount,
       })),
     };
   } catch (error) {
