@@ -18,7 +18,7 @@ export default async function CardWrapper() {
   const { numberOfGames, numberOfPlayers, totalGames } = await fetchCardData();
   return (
     <>
-      <Card title="Collected" value={totalGames} type="collected" />
+      <Card title="Total Buyins" value={totalGames} type="collected" />
       <Card title="Total Games" value={numberOfGames} type="games" />
       <Card title="Total Players" value={numberOfPlayers} type="players" />
     </>

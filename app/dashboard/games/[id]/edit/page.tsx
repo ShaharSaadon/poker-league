@@ -14,7 +14,6 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   const [game, players] = await Promise.all([
     getGameById(id),
     (async () => {
-      const game = await getGameById(id);
       return getPlayersByGame(id);
     })(),
   ]);

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Player } from '@/app/lib/definitions';
 import { updateBuyIn } from '@/app/lib/actions/buyin';
 import { formatCurrency } from '@/app/lib/utils';
 import { calculateExchanges } from '@/app/lib/actions/exchange';
+import { updateGameAttributes } from '@/app/lib/actions/games';
 
 export default function EditGameForm({
   game,
@@ -22,6 +23,7 @@ export default function EditGameForm({
   };
   players: Player[];
 }) {
+  const [gameStatus, setGameStatus] = useState(game.status); // Track game status locally
   const [buyIns, setBuyIns] = useState<Record<string, number[]>>(
     players.reduce((acc, player) => {
       acc[player.id] = player.gameBuyIns || [];
@@ -35,12 +37,21 @@ export default function EditGameForm({
       return acc;
     }, {} as Record<string, string>)
   );
+
+  const [isFinalizing, setIsFinalizing] = useState(false); // Track if we're in the finalizing step
+
+  // Sync gameStatus with the game.status prop
+  useEffect(() => {
+    setGameStatus(game.status);
+  }, [game.status]);
+
   const handleBalanceChange = (playerId: string, value: string) => {
     setFinalBalances((prev) => ({
       ...prev,
       [playerId]: value,
     }));
   };
+
   const addBuyIn = async (playerId: string, gameId: string, amount: number) => {
     setBuyIns((prev) => ({
       ...prev,
@@ -55,6 +66,10 @@ export default function EditGameForm({
     }
   };
 
+  const prepareToFinishGame = () => {
+    setIsFinalizing(true); // Allow the user to input final balances
+  };
+
   const finishGame = async () => {
     const parsedFinalBalances = Object.entries(finalBalances).reduce(
       (acc, [playerId, balance]) => {
@@ -67,6 +82,8 @@ export default function EditGameForm({
     );
 
     try {
+      await updateGameAttributes(game.id, { status: 'Finished' });
+      setGameStatus('Finished'); // Update local state to reflect new status
       const exchanges = await calculateExchanges(game.id, parsedFinalBalances);
       console.log('Game finished and exchanges calculated.');
 
@@ -91,6 +108,7 @@ export default function EditGameForm({
       });
 
       setExchangesSummary([...senders, ...receivers]);
+      setIsFinalizing(false); // Reset finalizing state
     } catch (error) {
       console.error('Failed to finish game and calculate exchanges:', error);
     }
@@ -111,19 +129,10 @@ export default function EditGameForm({
           {players.map((player) => (
             <div
               key={player.id}
-              className="rounded-lg border border-gray-200 p-4 shadow-sm"
+              className="relative rounded-lg border border-gray-200 p-4 shadow-sm"
             >
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-lg font-medium">{player.name}</h3>
-                <input
-                  type="number"
-                  placeholder="Final Balance"
-                  value={finalBalances[player.id]}
-                  onChange={(e) =>
-                    handleBalanceChange(player.id, e.target.value)
-                  }
-                  className="w-24 rounded-md border-gray-300 px-2 py-1 text-sm"
-                />
               </div>
               <p className="text-sm text-gray-500">
                 Total Buy-Ins:
@@ -139,6 +148,17 @@ export default function EditGameForm({
               >
                 Add Buy-In
               </button>
+              {isFinalizing && (
+                <input
+                  type="number"
+                  placeholder="Final Balance"
+                  value={finalBalances[player.id] ?? 0}
+                  onChange={(e) =>
+                    handleBalanceChange(player.id, e.target.value)
+                  }
+                  className="absolute bottom-4 left-1/2 w-11/12 transform -translate-x-1/2 rounded-md border-gray-300 px-2 py-1 text-sm"
+                />
+              )}
             </div>
           ))}
         </div>
@@ -148,13 +168,25 @@ export default function EditGameForm({
           Total Table Buy-Ins: {formatCurrency(totalTableBuyIns)}
         </div>
 
-        <button
-          type="button"
-          onClick={finishGame}
-          className="mt-4 rounded-md bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600"
-        >
-          Finish Game
-        </button>
+        {gameStatus === 'Playing' && !isFinalizing && (
+          <button
+            type="button"
+            onClick={prepareToFinishGame}
+            className="mt-4 rounded-md bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+          >
+            Input Final Balances
+          </button>
+        )}
+
+        {isFinalizing && (
+          <button
+            type="button"
+            onClick={finishGame}
+            className="mt-4 rounded-md bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600"
+          >
+            Finish Game
+          </button>
+        )}
 
         {/* Exchanges Summary */}
         {exchangesSummary.length > 0 && (

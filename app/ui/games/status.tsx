@@ -12,18 +12,20 @@ export default function GameStatus({ status }: { status: string }) {
         }
       )}
     >
-      {status ? (
+      {status}
+
+      {status === 'Finished' && (
         <>
-          Playing
+          {status}
           <ClockIcon className="ml-1 w-4 text-gray-500" />
         </>
-      ) : null}
-      {!status ? (
+      )}
+      {status === 'Playing' && (
         <>
-          completed
+          Playing
           <CheckIcon className="ml-1 w-4 text-white" />
         </>
-      ) : null}
+      )}
     </span>
   );
 }
