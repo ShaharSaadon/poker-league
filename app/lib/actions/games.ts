@@ -366,9 +366,16 @@ export async function fetchFilteredGames(query: string, currentPage: number) {
     throw new Error('Failed to fetch games.');
   }
 }
+type GameAttributes = {
+  status?: string;
+  finishedAt?: Date | null;
+  host?: string;
+  startAmount?: number;
+};
+
 export async function updateGameAttributes(
   id: string,
-  attributes: Record<string, any>
+  attributes: Record<string, GameAttributes>
 ) {
   try {
     await prisma.game.update({
