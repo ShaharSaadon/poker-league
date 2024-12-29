@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     template: '%s | Poker League Dashboard',
     default: 'Poker League Dashboard',
   },
-  description: 'The official Next.js Learn Dashboard built with App Router.',
+  description: 'This app was created because Amir is addicted to the card',
   metadataBase: new URL('https://next-learn-dashboard.vercel.sh'),
 };
 
