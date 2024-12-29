@@ -32,6 +32,7 @@ model Player {
   exchangesSent     Exchange[] @relation("ExchangeFrom") // Exchanges where the player is the sender
   exchangesReceived Exchange[] @relation("ExchangeTo") // Exchanges where the player is the receiver
   createdAt         DateTime   @default(now())
+  gameBuyIns        Int[]
 }
 
 model Table {
@@ -40,23 +41,28 @@ model Table {
   createdAt       DateTime @default(now())
   createdById     String
   createdBy       User     @relation("UserCreatedTables", fields: [createdById], references: [id])
-  currentGame     Game? // Only a simple relation here
-  registeredUsers User[]   @relation("UserRegisteredTables") // Users registered for this table
-  players         Player[] @relation("TablePlayers") // Players associated with the table
+  currentGameId   String?  @unique // Foreign key to the current game, must be unique for one-to-one relation
+  currentGame     Game?    @relation("CurrentGame", fields: [currentGameId], references: [id], map: "Table_CurrentGame_fkey") // One-to-one relation
+  registeredUsers User[]   @relation("UserRegisteredTables")
+  players         Player[] @relation("TablePlayers")
+  games           Game[]   @relation("AllGames", map: "Table_AllGames_fkey") // One-to-many relation
 }
 
 model Game {
-  id          String     @id @default(uuid())
-  tableId     String     @unique
-  table       Table      @relation(fields: [tableId], references: [id])
-  createdById String // User who created this game
-  createdBy   User       @relation("UserGames", fields: [createdById], references: [id])
-  players     Player[]   @relation("PlayerGames") // Players participating in the game
-  startAmount Float // Starting amount for the game
-  buyIns      BuyIn[] // Buy-ins during this game
-  exchanges   Exchange[] // Exchanges at the end of the game
-  createdAt   DateTime   @default(now()) // Timestamps
-  finishedAt  DateTime? // Optional, set when the game is finished
+  id           String     @id @default(uuid())
+  tableId      String
+  status       String     @default("Playing")
+  table        Table      @relation("AllGames", fields: [tableId], references: [id], map: "Game_AllGames_fkey") // Link to Table's games
+  currentTable Table?     @relation("CurrentGame", map: "Game_CurrentGame_fkey") // Link to Table's current game
+  createdById  String
+  createdBy    User       @relation("UserGames", fields: [createdById], references: [id])
+  players      Player[]   @relation("PlayerGames")
+  startAmount  Float
+  buyIns       BuyIn[]
+  exchanges    Exchange[]
+  createdAt    DateTime   @default(now())
+  finishedAt   DateTime?
+  host         String     @default("")
 }
 
 model BuyIn {

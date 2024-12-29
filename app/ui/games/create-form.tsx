@@ -1,24 +1,49 @@
 'use client';
 
-import { useState } from 'react';
-import { PlayerField } from '@/app/lib/definitions';
-import Link from 'next/link';
-import {
-  CurrencyDollarIcon,
-  // CheckIcon,
-  // ClockIcon,
-  // CurrencyDollarIcon,
-  UserCircleIcon,
-} from '@heroicons/react/24/outline';
-import { Button } from '@/app/ui/button';
-import { useActionState } from 'react';
-import { createGame, State } from '@/app/lib/actions';
+import { useEffect, useState } from 'react';
+import { CurrencyDollarIcon } from '@heroicons/react/24/outline';
+import { createGame } from '@/app/lib/actions/games';
+import { getTables } from '@/app/lib/actions/tables';
+import { getPlayersByTable } from '@/app/lib/actions/players';
+import { Player, Table } from '@prisma/client';
 
-export default function Form({ players }: { players: PlayerField[] }) {
-  const initialState: State = { message: '', errors: {} };
-  const [state, formAction] = useActionState(createGame, initialState);
-  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
-  const [availablePlayers, setAvailablePlayers] = useState(players);
+export default function Form() {
+  const [tables, setTables] = useState<Table[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]); // Players fetched for the table
+  const [availablePlayers, setAvailablePlayers] = useState<Player[]>([]); // Available players to select
+  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]); // Selected player IDs
+  const [selectedTable, setSelectedTable] = useState('');
+  const [host, setHost] = useState('');
+  const [startAmount, setStartAmount] = useState(0);
+  // Fetch tables on mount
+  useEffect(() => {
+    async function fetchTables() {
+      try {
+        const data: Table[] = await getTables(); // Ensure `getTables` returns the correct structure
+        setTables(data); // Update state with fetched data
+      } catch (error) {
+        console.error('Failed to fetch tables:', error);
+      }
+    }
+
+    fetchTables();
+  }, []);
+
+  // Fetch players for the selected table
+  useEffect(() => {
+    async function fetchPlayersForTable() {
+      if (!selectedTable) return;
+
+      try {
+        const data = await getPlayersByTable(selectedTable); // Fetch players for the selected table
+        setPlayers(data);
+        setAvailablePlayers(data); // Initialize available players
+      } catch (error) {
+        console.error('Failed to fetch players:', error);
+      }
+    }
+    fetchPlayersForTable();
+  }, [selectedTable]);
 
   const handlePlayerSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedPlayerId = event.target.value;
@@ -31,129 +56,129 @@ export default function Form({ players }: { players: PlayerField[] }) {
     }
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const formData = new FormData();
 
-    // Add all selected player IDs to the FormData
-    if (selectedPlayers.length > 0) {
-      selectedPlayers.forEach((playerId) => {
-        formData.append('playerIds', playerId);
-      });
+    // Extract data from the form
+    const formData = new FormData(event.currentTarget);
+    const host = formData.get('host') as string;
+    const startAmount = parseInt(formData.get('startAmount') as string, 10);
+    const rawStartAmount = formData.get('startAmount');
+    console.log('Raw startAmount:', rawStartAmount);
+    // Construct the object to match the expected type
+    const gameData = {
+      host: host || 'Tubul',
+      tableId: selectedTable,
+      playerIds: selectedPlayers,
+      startAmount: startAmount || 100,
+      createdById: '4fb78be3-3f89-4826-9457-856928d330ef',
+    };
+    console.log('gameData:', gameData);
+    try {
+      await createGame(gameData); // Pass the object, not FormData
+      console.log('Game created successfully!');
+    } catch (error) {
+      console.log('Failed to create game.', error);
     }
-
-    // Add other form fields
-    formData.append('host', event.currentTarget.host.value);
-    formData.append('amount', event.currentTarget.amount.value);
-
-    formAction(formData); // Use the provided formAction
   };
 
   return (
-    <form onSubmit={handleSubmit} aria-describedby="form-error">
+    <form onSubmit={handleSubmit}>
       <div className="rounded-md bg-gray-50 p-4 md:p-6">
-        {/* Table */}
+        {/* Table Selection */}
         <div className="mb-4">
           <label htmlFor="table" className="mb-2 block text-sm font-medium">
-            Enter a table
+            Select a Table
           </label>
-          <div className="relative mt-2 rounded-md">
-            <input
-              id="table"
-              name="table"
-              type="checkbox"
-              placeholder="Enter a table name"
-              className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
-              aria-describedby="table-error"
-            />
-          </div>
+          <select
+            id="table"
+            value={selectedTable}
+            onChange={(e) => setSelectedTable(e.target.value)}
+            className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm"
+          >
+            <option value="" disabled>
+              Choose a table
+            </option>
+            {tables.map((table) => (
+              <option key={table.id} value={table.id}>
+                {table.name}
+              </option>
+            ))}
+          </select>
         </div>
-        {/* Host */}
+
+        {/* Host Input */}
         <div className="mb-4">
           <label htmlFor="host" className="mb-2 block text-sm font-medium">
-            Enter an host
+            Host Name
           </label>
-          <div className="relative mt-2 rounded-md">
-            <input
-              id="host"
-              name="host"
-              type="text"
-              placeholder="Enter a host name"
-              className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
-              aria-describedby="host-error"
-            />
-          </div>
+          <input
+            id="host"
+            value={host}
+            onChange={(e) => setHost(e.target.value)}
+            placeholder="Enter host name"
+            className="peer block w-full rounded-md border border-gray-200 py-2 text-sm"
+          />
         </div>
-        {/* Starting Game Amount */}
+
+        {/* Start Amount */}
         <div className="mb-4">
-          <label htmlFor="amount" className="mb-2 block text-sm font-medium">
-            Choose an amount
+          <label
+            htmlFor="startAmount"
+            className="mb-2 block text-sm font-medium"
+          >
+            Starting Amount
           </label>
-          <div className="relative mt-2 rounded-md">
-            <input
-              id="amount"
-              name="amount"
-              type="number"
-              placeholder="Enter USD amount"
-              className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
-              aria-describedby="amount-error"
-            />
-            <CurrencyDollarIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
-          </div>
+          <input
+            id="startAmount"
+            type="number"
+            value={startAmount}
+            onChange={(e) =>
+              setStartAmount(e.target.value === '' ? 0 : Number(e.target.value))
+            }
+            placeholder="Enter starting amount"
+            className="peer block w-full rounded-md border border-gray-200 py-2 text-sm"
+          />
+          <CurrencyDollarIcon className="absolute left-3 top-1/2 h-5 w-5 text-gray-500" />
         </div>
+
         {/* Player Selection */}
         <div className="mb-4">
           <label htmlFor="player" className="mb-2 block text-sm font-medium">
-            Choose player
+            Select Players
           </label>
-          <div className="relative">
-            <select
-              id="player"
-              name="playerId"
-              className="peer block w-full cursor-pointer rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
-              defaultValue=""
-              onChange={handlePlayerSelect}
-            >
-              <option value="" disabled>
-                Select a player
+          <select
+            id="player"
+            onChange={handlePlayerSelect}
+            className="peer block w-full cursor-pointer rounded-md border border-gray-200 py-2 pl-10 text-sm"
+          >
+            <option value="" disabled>
+              Choose players
+            </option>
+            {availablePlayers.map((player) => (
+              <option key={player.id} value={player.id}>
+                {player.name}
               </option>
-              {availablePlayers.map((player) => (
-                <option key={player.id} value={player.id}>
-                  {player.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            ))}
+          </select>
         </div>
-        <p>Selected Players:</p>
+
         {/* Selected Players */}
-        {selectedPlayers.map((playerId) => {
-          const selectedPlayer = players.find(
-            (player) => player.id === playerId
-          );
-          return (
-            <div key={playerId} className="mb-4">
-              <li>{selectedPlayer?.name}</li>
-            </div>
-          );
-        })}
-        <div id="form-error" aria-live="polite" aria-atomic="true">
-          {state.message && (
-            <p className="mt-2 text-sm text-red-500">{state.message}</p>
-          )}
+        <div>
+          <p>Selected Players:</p>
+          <ul>
+            {selectedPlayers.map((playerId) => {
+              const player = players.find((p) => p.id === playerId);
+              return <li key={playerId}>{player?.name}</li>;
+            })}
+          </ul>
         </div>
       </div>
-      <div className="mt-6 flex justify-end gap-4">
-        <button
-          type="button"
-          onClick={() => window.history.back()}
-          className="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200"
-        >
-          Cancel
-        </button>
+
+      <div className="mt-6 flex justify-end">
         <button
           type="submit"
-          className="flex h-10 items-center rounded-lg bg-blue-500 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+          className="rounded-lg bg-blue-500 px-4 py-2 text-white"
         >
           Create Game
         </button>
@@ -161,45 +186,3 @@ export default function Form({ players }: { players: PlayerField[] }) {
     </form>
   );
 }
-
-/* Game Status */
-
-/* <fieldset>
-  <legend className="mb-2 block text-sm font-medium">
-    Set the game status
-  </legend>
-   <div className="rounded-md border border-gray-200 bg-white px-[14px] py-3">
-            <div className="flex gap-4">
-              <div className="flex items-center">
-                <input
-                  id="pending"
-                  name="status"
-                  type="radio"
-                  value="pending"
-                  className="h-4 w-4 cursor-pointer border-gray-300 bg-gray-100 text-gray-600 focus:ring-2"
-                />
-                <label
-                  htmlFor="pending"
-                  className="ml-2 flex cursor-pointer items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600"
-                >
-                  Pending <ClockIcon className="h-4 w-4" />
-                </label>
-              </div>
-              <div className="flex items-center">
-                <input
-                  id="paid"
-                  name="status"
-                  type="radio"
-                  value="paid"
-                  className="h-4 w-4 cursor-pointer border-gray-300 bg-gray-100 text-gray-600 focus:ring-2"
-                />
-                <label
-                  htmlFor="paid"
-                  className="ml-2 flex cursor-pointer items-center gap-1.5 rounded-full bg-green-500 px-3 py-1.5 text-xs font-medium text-white"
-                >
-                  Paid <CheckIcon className="h-4 w-4" />
-                </label>
-              </div>
-            </div>
-          </div> 
-</fieldset>; */

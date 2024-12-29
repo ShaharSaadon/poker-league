@@ -60,6 +60,30 @@ export type PlayerField = {
 export type GameForm = {
   id: string;
   player_id: string;
-  amount: number;
+  startAmount: number;
   status: 'pending' | 'paid';
 };
+
+export type State = {
+  errors?: {
+    status?: string[];
+    playerIds?: string[];
+    startAmount?: string[];
+    host?: string[];
+  };
+  message: string;
+  error?: unknown;
+};
+export type Player = {
+  id: string;
+  name: string;
+  email: string | null;
+  userId: string | null;
+  createdAt: Date;
+  gameBuyIns: number[]; // Array of buy-ins for the current game
+  buyIns: { amount: number; gameId: string }[]; // Detailed buy-ins across all games
+  exchangesSent: { id: string; amount: number; toPlayerId: string }[];
+  exchangesReceived: { id: string; amount: number; fromPlayerId: string }[];
+};
+
+export const ITEMS_PER_PAGE = 6;

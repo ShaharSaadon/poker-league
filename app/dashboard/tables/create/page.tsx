@@ -1,18 +1,18 @@
-import Form from '@/app/ui/games/create-form';
-import Breadcrumbs from '@/app/ui/games/breadcrumbs';
+import Form from '@/app/ui/tables/create-form';
+import Breadcrumbs from '@/app/ui/tables/breadcrumbs';
 import { Metadata } from 'next';
 export const metadata: Metadata = {
-  title: 'Create Game',
+  title: 'Create Table',
 };
 export default async function Page() {
   return (
     <main>
       <Breadcrumbs
         breadcrumbs={[
-          { label: 'Games', href: '/dashboard/games' },
+          { label: 'Tables', href: '/dashboard/tables' },
           {
-            label: 'Create Game',
-            href: '/dashboard/games/create',
+            label: 'Create Table',
+            href: '/dashboard/tables/create',
             active: true,
           },
         ]}

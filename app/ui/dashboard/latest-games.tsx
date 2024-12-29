@@ -1,11 +1,9 @@
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
-import clsx from 'clsx';
-import Image from 'next/image';
 import { lusitana } from '@/app/ui/fonts';
-import { fetchLatestGames } from '@/app/lib/data';
+import { getLatestGames } from '@/app/lib/actions/games';
 
 export default async function LatestGames() {
-  const latestGames = await fetchLatestGames();
+  const latestGames = await getLatestGames();
 
   return (
     <div className="flex w-full flex-col md:col-span-4">
@@ -15,42 +13,30 @@ export default async function LatestGames() {
       <div className="flex grow flex-col justify-between rounded-xl bg-gray-50 p-4">
         {
           <div className="bg-white px-6">
-            {latestGames.map((game, i) => {
-              return (
-                <div
-                  key={game.id}
-                  className={clsx(
-                    'flex flex-row items-center justify-between py-4',
-                    {
-                      'border-t': i !== 0,
-                    }
-                  )}
-                >
-                  <div className="flex items-center">
-                    <Image
-                      src={game.image_url}
-                      alt={`${game.name}'s profile picture`}
-                      className="mr-4 rounded-full"
-                      width={32}
-                      height={32}
-                    />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold md:text-base">
-                        {game.name}
-                      </p>
-                      <p className="hidden text-sm text-gray-500 sm:block">
-                        {game.email}
-                      </p>
-                    </div>
-                  </div>
-                  <p
-                    className={`${lusitana.className} truncate text-sm font-medium md:text-base`}
-                  >
-                    {game.amount}
+            {latestGames.map((game) => (
+              <div
+                key={game.id}
+                className="flex flex-row items-center justify-between py-4 border-t"
+              >
+                <div className="flex flex-col">
+                  <p className="truncate text-sm font-semibold md:text-base">
+                    Table: {game.table.name} {/* Access table name */}
+                  </p>
+                  <p className="text-sm text-gray-500">Host: {game.host}</p>
+                  <p className="text-sm text-gray-500">
+                    Players: {game.players.length} {/* Compute player count */}
                   </p>
                 </div>
-              );
-            })}
+                <div className="flex flex-col items-end">
+                  <p className="text-sm font-medium md:text-base">
+                    Amount: ${game.startAmount}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {new Date(game.date).toLocaleString()} {/* Format date */}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         }
         <div className="flex items-center pb-2 pt-6">

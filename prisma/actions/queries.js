@@ -124,28 +124,6 @@ async function main() {
         },
       },
     }),
-    prisma.table.create({
-      data: {
-        name: 'Table 4',
-        createdBy: {
-          connect: { id: users[3].id },
-        },
-        players: {
-          connect: [{ id: players[0].id }, { id: players[3].id }],
-        },
-      },
-    }),
-    prisma.table.create({
-      data: {
-        name: 'Table 5',
-        createdBy: {
-          connect: { id: users[4].id },
-        },
-        players: {
-          connect: [{ id: players[2].id }, { id: players[4].id }],
-        },
-      },
-    }),
   ]);
 
   console.log(
@@ -199,156 +177,34 @@ async function main() {
         createdAt: new Date(),
       },
     }),
-    prisma.game.create({
-      data: {
-        table: {
-          connect: { id: tables[3].id },
-        },
-        createdBy: {
-          connect: { id: users[3].id },
-        },
-        players: {
-          connect: [{ id: players[0].id }, { id: players[3].id }],
-        },
-        startAmount: 250,
-        createdAt: new Date(),
-      },
-    }),
-    prisma.game.create({
-      data: {
-        table: {
-          connect: { id: tables[4].id },
-        },
-        createdBy: {
-          connect: { id: users[4].id },
-        },
-        players: {
-          connect: [{ id: players[2].id }, { id: players[4].id }],
-        },
-        startAmount: 300,
-        createdAt: new Date(),
-      },
-    }),
   ]);
 
   console.log(`Created games: ${games.map((game) => game.id).join(', ')}`);
 
-  // Seed BuyIns
-  const buyIns = await Promise.all([
-    prisma.buyIn.create({
-      data: {
-        player: {
-          connect: { id: players[0].id },
-        },
-        game: {
-          connect: { id: games[0].id },
-        },
-        amount: 50,
-      },
+  // Assign currentGame to Tables
+  await Promise.all([
+    prisma.table.update({
+      where: { id: tables[0].id },
+      data: { currentGame: { connect: { id: games[0].id } } },
     }),
-    prisma.buyIn.create({
-      data: {
-        player: {
-          connect: { id: players[1].id },
-        },
-        game: {
-          connect: { id: games[0].id },
-        },
-        amount: 70,
-      },
+    prisma.table.update({
+      where: { id: tables[1].id },
+      data: { currentGame: { connect: { id: games[1].id } } },
     }),
-    prisma.buyIn.create({
-      data: {
-        player: {
-          connect: { id: players[2].id },
-        },
-        game: {
-          connect: { id: games[1].id },
-        },
-        amount: 100,
-      },
-    }),
-    prisma.buyIn.create({
-      data: {
-        player: {
-          connect: { id: players[3].id },
-        },
-        game: {
-          connect: { id: games[1].id },
-        },
-        amount: 120,
-      },
-    }),
-    prisma.buyIn.create({
-      data: {
-        player: {
-          connect: { id: players[4].id },
-        },
-        game: {
-          connect: { id: games[2].id },
-        },
-        amount: 80,
-      },
+    prisma.table.update({
+      where: { id: tables[2].id },
+      data: { currentGame: { connect: { id: games[2].id } } },
     }),
   ]);
 
-  console.log(`Created buy-ins.`);
-
-  // Seed Exchanges
-  const exchanges = await Promise.all([
-    prisma.exchange.create({
-      data: {
-        fromPlayer: {
-          connect: { id: players[0].id },
-        },
-        toPlayer: {
-          connect: { id: players[1].id },
-        },
-        game: {
-          connect: { id: games[0].id },
-        },
-        amount: 30,
-      },
-    }),
-    prisma.exchange.create({
-      data: {
-        fromPlayer: {
-          connect: { id: players[2].id },
-        },
-        toPlayer: {
-          connect: { id: players[3].id },
-        },
-        game: {
-          connect: { id: games[1].id },
-        },
-        amount: 50,
-      },
-    }),
-    prisma.exchange.create({
-      data: {
-        fromPlayer: {
-          connect: { id: players[4].id },
-        },
-        toPlayer: {
-          connect: { id: players[0].id },
-        },
-        game: {
-          connect: { id: games[2].id },
-        },
-        amount: 20,
-      },
-    }),
-  ]);
-
-  console.log(`Created exchanges.`);
+  console.log(`Assigned current games to tables.`);
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (e) => {
+  .catch((e) => {
     console.error(e);
-    await prisma.$disconnect();
     process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });

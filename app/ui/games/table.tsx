@@ -1,8 +1,7 @@
-import Image from 'next/image';
 import { UpdateGame } from '@/app/ui/games/buttons';
 import GameStatus from '@/app/ui/games/status';
 import { formatDateToLocal, formatCurrency } from '@/app/lib/utils';
-import { fetchFilteredGames } from '@/app/lib/data';
+import { fetchFilteredGames } from '@/app/lib/actions/games';
 
 export default async function GamesTable({
   query,
@@ -28,13 +27,15 @@ export default async function GamesTable({
                     <div className="mb-2 flex items-center">
                       <p>{game?.date.toString()}</p>
                     </div>
+                    <p>Host: {game.host}</p>
+                    <p>Number of Hands: {game.totalHands}</p>
                   </div>
                   <GameStatus status={game.status} />
                 </div>
                 <div className="flex w-full items-center justify-between pt-4">
                   <div>
                     <p className="text-xl font-medium">
-                      {formatCurrency(game.amount)}
+                      {formatCurrency(game.totalAmount)}
                     </p>
                   </div>
                   <div className="flex justify-end gap-2">
@@ -51,10 +52,13 @@ export default async function GamesTable({
                   Date
                 </th>
                 <th scope="col" className="px-3 py-5 font-medium">
-                  Amount
+                  Total Amount
                 </th>
                 <th scope="col" className="px-3 py-5 font-medium">
-                  Location
+                  Number of Hands
+                </th>
+                <th scope="col" className="px-3 py-5 font-medium">
+                  Host
                 </th>
                 <th scope="col" className="px-3 py-5 font-medium">
                   Game Status
@@ -76,7 +80,10 @@ export default async function GamesTable({
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3">
-                    {formatCurrency(game.amount)}
+                    {formatCurrency(game.totalAmount)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3">
+                    {game.totalHands}
                   </td>
                   <td className="whitespace-nowrap px-3 py-3">{game.host}</td>
                   <td className="whitespace-nowrap px-3 py-3">
