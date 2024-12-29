@@ -375,7 +375,7 @@ type GameAttributes = {
 
 export async function updateGameAttributes(
   id: string,
-  attributes: Record<string, GameAttributes>
+  attributes: Partial<GameAttributes>
 ) {
   try {
     await prisma.game.update({
